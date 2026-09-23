@@ -13,6 +13,8 @@
 
         <div class="flex items-center gap-6 text-sm">
             @auth
+                <a href="{{ route('produk.index') }}" class="text-neutral-600 hover:text-neutral-900">Kelola produk</a>
+
                 <a href="{{ route('akun') }}" class="text-neutral-600 hover:text-neutral-900">
                     {{ auth()->user()->name }}
                 </a>

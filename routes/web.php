@@ -4,6 +4,7 @@ use App\Http\Controllers\AkunController;
 use App\Http\Controllers\Auth\PendaftaranController;
 use App\Http\Controllers\Auth\SesiController;
 use App\Http\Controllers\BerandaController;
+use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\TentangController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,4 +22,6 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/akun', [AkunController::class, 'index'])->name('akun');
     Route::post('/keluar', [SesiController::class, 'destroy'])->name('logout');
+
+    Route::resource('produk', ProdukController::class)->except('show');
 });
