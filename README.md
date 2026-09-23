@@ -126,6 +126,7 @@ resources/views/
 routes/web.php                   seluruh rute aplikasi
 tests/Feature/                   pengujian halaman dan autentikasi
 .github/workflows/pipeline.yml   pipeline build → test → staging → production
+deploy.sh                        skrip deploy ke server (7 langkah, set -e)
 ```
 
 ## Alur kerja Git
@@ -221,7 +222,7 @@ pula dijalankan manual dari tab Actions. Isinya empat job yang berjalan beruruta
 | `build` | `composer install`, `vendor/bin/pint --test`, `npm ci`, `npm run build`, lalu mengunggah hasil build sebagai artifact |
 | `test` | Memakai `vendor/` dan hasil build dari job `build`, menyiapkan `.env`, lalu `php artisan test` |
 | `staging` | Simulasi deploy ke staging (masih `echo`) |
-| `production` | Simulasi deploy ke production (masih `echo`). Hanya berjalan dari `main` dan menunggu persetujuan reviewer |
+| `production` | Menampilkan 7 langkah `deploy.sh` sebagai `echo`. Hanya berjalan dari `main` dan menunggu persetujuan reviewer |
 
 Pull Request baru boleh digabungkan setelah `build` dan `test` hijau.
 
@@ -232,3 +233,12 @@ Job `production` dijaga dua lapis:
 - `environment: production`: environment ini diatur di **Settings → Environments →
   production** dengan *Required reviewers*, sehingga job menunggu persetujuan
   sebelum berjalan.
+
+### Skrip deploy
+
+`deploy.sh` berisi langkah deploy yang kelak dijalankan di server, berurutan:
+`artisan down` → `git pull` → `composer install --no-dev` → `migrate --force` →
+cache config/route/view → `queue:restart` → `artisan up`. Baris `set -e` membuat skrip
+berhenti di perintah pertama yang gagal, sehingga misalnya migrasi yang gagal tidak
+berlanjut ke `artisan up` dan membuka aplikasi dalam keadaan rusak. Selama belum ada
+server, job `production` hanya meng-`echo` langkah yang sama.
