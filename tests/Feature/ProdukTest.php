@@ -24,7 +24,7 @@ class ProdukTest extends TestCase
             ->get(route('produk.index'))
             ->assertOk()
             ->assertSee('Kursi Kayu Ek')
-            ->assertSee('Rp9.999.999');
+            ->assertSee('Rp1.250.000');
     }
 
     public function test_formulir_tambah_dan_ubah_dapat_diakses(): void
