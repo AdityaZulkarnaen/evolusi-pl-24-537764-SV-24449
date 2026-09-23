@@ -125,7 +125,7 @@ resources/views/
     auth/                        halaman masuk dan daftar
 routes/web.php                   seluruh rute aplikasi
 tests/Feature/                   pengujian halaman dan autentikasi
-.github/workflows/ci.yml         pipeline CI
+.github/workflows/pipeline.yml   pipeline build → test → staging → production
 ```
 
 ## Alur kerja Git
@@ -212,13 +212,15 @@ git merge dev          # selesaikan konflik bila ada, lalu commit
 
 ## Integrasi berkelanjutan
 
-`.github/workflows/ci.yml` berjalan pada setiap push dan Pull Request, dan dapat pula
-dijalankan manual dari tab Actions. Isinya tiga job yang berjalan paralel:
+`.github/workflows/pipeline.yml` berjalan pada setiap push dan Pull Request, dan dapat
+pula dijalankan manual dari tab Actions. Isinya empat job yang berjalan berurutan lewat
+`needs:`; jika satu job gagal, job setelahnya tidak dijalankan.
 
 | Job | Isi |
 | --- | --- |
-| `lint` | `vendor/bin/pint --test` untuk memeriksa gaya penulisan kode |
-| `tests` | Menyiapkan `.env`, basis data SQLite, migrasi, lalu `php artisan test` |
-| `frontend` | `npm ci`, `npm run build`, memastikan manifest terbentuk, lalu mengunggah hasil build sebagai artifact |
+| `build` | `composer install`, `vendor/bin/pint --test`, `npm ci`, `npm run build`, lalu mengunggah hasil build sebagai artifact |
+| `test` | Memakai `vendor/` dan hasil build dari job `build`, menyiapkan `.env`, lalu `php artisan test` |
+| `staging` | Simulasi deploy ke staging (masih `echo`) |
+| `production` | Simulasi deploy ke production (masih `echo`) |
 
-Pull Request baru boleh digabungkan setelah ketiga job hijau.
+Pull Request baru boleh digabungkan setelah `build` dan `test` hijau.

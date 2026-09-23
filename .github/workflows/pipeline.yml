@@ -1,0 +1,111 @@
+name: Pipeline
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Cache folder vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependensi PHP
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Periksa gaya penulisan kode
+        run: vendor/bin/pint --test
+
+      - name: Siapkan Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependensi Node
+        run: npm ci
+
+      - name: Build aset produksi
+        run: npm run build
+
+      - name: Unggah hasil build
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil-build
+          path: public/build
+          retention-days: 7
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, intl
+          coverage: none
+
+      - name: Ambil folder vendor dari build
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependensi PHP
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Ambil hasil build aset
+        uses: actions/download-artifact@v4
+        with:
+          name: hasil-build
+          path: public/build
+
+      - name: Siapkan environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Jalankan pengujian
+        run: php artisan test
+
+  staging:
+    name: Staging
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy ke staging
+        run: echo "Deploy ke staging (simulasi)"
+
+  production:
+    name: Production
+    needs: staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy ke production
+        run: echo "Deploy ke production (simulasi)"
