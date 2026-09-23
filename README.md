@@ -125,7 +125,8 @@ resources/views/
     auth/                        halaman masuk dan daftar
 routes/web.php                   seluruh rute aplikasi
 tests/Feature/                   pengujian halaman dan autentikasi
-.github/workflows/ci.yml         pipeline CI
+.github/workflows/pipeline.yml   pipeline build → test → staging → production
+deploy.sh                        skrip deploy ke server (7 langkah, set -e)
 ```
 
 ## Alur kerja Git
@@ -212,13 +213,32 @@ git merge dev          # selesaikan konflik bila ada, lalu commit
 
 ## Integrasi berkelanjutan
 
-`.github/workflows/ci.yml` berjalan pada setiap push dan Pull Request, dan dapat pula
-dijalankan manual dari tab Actions. Isinya tiga job yang berjalan paralel:
+`.github/workflows/pipeline.yml` berjalan pada setiap push dan Pull Request, dan dapat
+pula dijalankan manual dari tab Actions. Isinya empat job yang berjalan berurutan lewat
+`needs:`; jika satu job gagal, job setelahnya tidak dijalankan.
 
 | Job | Isi |
 | --- | --- |
-| `lint` | `vendor/bin/pint --test` untuk memeriksa gaya penulisan kode |
-| `tests` | Menyiapkan `.env`, basis data SQLite, migrasi, lalu `php artisan test` |
-| `frontend` | `npm ci`, `npm run build`, memastikan manifest terbentuk, lalu mengunggah hasil build sebagai artifact |
+| `build` | `composer install`, `vendor/bin/pint --test`, `npm ci`, `npm run build`, lalu mengunggah hasil build sebagai artifact |
+| `test` | Memakai `vendor/` dan hasil build dari job `build`, menyiapkan `.env`, lalu `php artisan test` |
+| `staging` | Simulasi deploy ke staging (masih `echo`) |
+| `production` | Menampilkan 7 langkah `deploy.sh` sebagai `echo`. Hanya berjalan dari `main` dan menunggu persetujuan reviewer |
 
-Pull Request baru boleh digabungkan setelah ketiga job hijau.
+Pull Request baru boleh digabungkan setelah `build` dan `test` hijau.
+
+Job `production` dijaga dua lapis:
+
+- `if: github.ref == 'refs/heads/main'`: push ke branch lain (dan Pull Request)
+  tetap menjalankan `build`, `test`, dan `staging`, tetapi `production` ditandai *skipped*.
+- `environment: production`: environment ini diatur di **Settings → Environments →
+  production** dengan *Required reviewers*, sehingga job menunggu persetujuan
+  sebelum berjalan.
+
+### Skrip deploy
+
+`deploy.sh` berisi langkah deploy yang kelak dijalankan di server, berurutan:
+`artisan down` → `git pull` → `composer install --no-dev` → `migrate --force` →
+cache config/route/view → `queue:restart` → `artisan up`. Baris `set -e` membuat skrip
+berhenti di perintah pertama yang gagal, sehingga misalnya migrasi yang gagal tidak
+berlanjut ke `artisan up` dan membuka aplikasi dalam keadaan rusak. Selama belum ada
+server, job `production` hanya meng-`echo` langkah yang sama.
