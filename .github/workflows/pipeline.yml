@@ -104,6 +104,11 @@ jobs:
   production:
     name: Production
     needs: staging
+    # Hanya dari branch main; branch lain dan Pull Request berhenti di staging.
+    if: github.ref == 'refs/heads/main'
+    # Environment "production" memakai required reviewer, jadi job ini
+    # menunggu persetujuan sebelum berjalan.
+    environment: production
     runs-on: ubuntu-latest
 
     steps:

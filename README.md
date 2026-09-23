@@ -221,6 +221,14 @@ pula dijalankan manual dari tab Actions. Isinya empat job yang berjalan beruruta
 | `build` | `composer install`, `vendor/bin/pint --test`, `npm ci`, `npm run build`, lalu mengunggah hasil build sebagai artifact |
 | `test` | Memakai `vendor/` dan hasil build dari job `build`, menyiapkan `.env`, lalu `php artisan test` |
 | `staging` | Simulasi deploy ke staging (masih `echo`) |
-| `production` | Simulasi deploy ke production (masih `echo`) |
+| `production` | Simulasi deploy ke production (masih `echo`). Hanya berjalan dari `main` dan menunggu persetujuan reviewer |
 
 Pull Request baru boleh digabungkan setelah `build` dan `test` hijau.
+
+Job `production` dijaga dua lapis:
+
+- `if: github.ref == 'refs/heads/main'`: push ke branch lain (dan Pull Request)
+  tetap menjalankan `build`, `test`, dan `staging`, tetapi `production` ditandai *skipped*.
+- `environment: production`: environment ini diatur di **Settings → Environments →
+  production** dengan *Required reviewers*, sehingga job menunggu persetujuan
+  sebelum berjalan.
