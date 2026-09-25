@@ -140,6 +140,7 @@ Port 5174 dipakai karena 5173 sudah menjadi milik Vite Laravel.
 | --- | --- |
 | `npm run dev` | Server pengembangan Vue |
 | `npm run lint` | Memeriksa kode dengan ESLint |
+| `npm run test:unit` | Menjalankan unit test Vitest (tambahkan `-- --run` agar tidak terus memantau) |
 | `npm run build` | Membangun hasil produksi ke `dist/` |
 
 ## Struktur berkas utama
