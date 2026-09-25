@@ -108,6 +108,19 @@ Buka http://127.0.0.1:8000.
 Aset hasil `npm run build` tidak ikut di-commit, jadi pengujian sengaja mematikan Vite
 lewat `withoutVite()` di `tests/TestCase.php`.
 
+## API
+
+`GET /api/produk` mengembalikan seluruh produk dalam bentuk JSON dan bisa diakses tanpa
+login:
+
+```json
+{"data":[{"id":1,"nama":"Kursi Kayu Ek","kategori":"Furnitur","harga":1250000,"stok":4}]}
+```
+
+Browser hanya mengizinkan halaman dari alamat `FRONTEND_URL` (bawaan
+`http://localhost:5174`) memanggil API ini. Ubah nilainya di `.env` bila frontend
+berjalan di alamat lain.
+
 ## Struktur berkas utama
 
 ```
@@ -116,6 +129,8 @@ app/Http/Controllers/
     AkunController.php           halaman akun pengguna
     Auth/PendaftaranController.php
     Auth/SesiController.php      masuk dan keluar
+    ProdukController.php         CRUD produk (Blade)
+    Api/ProdukController.php     GET /api/produk untuk frontend Vue
 resources/views/
     layouts/app.blade.php        kerangka halaman
     partials/                    header dan footer
@@ -123,7 +138,9 @@ resources/views/
     beranda.blade.php
     akun.blade.php
     auth/                        halaman masuk dan daftar
-routes/web.php                   seluruh rute aplikasi
+routes/web.php                   rute halaman web
+routes/api.php                   rute API berformat JSON
+config/cors.php                  alamat frontend yang boleh memanggil API
 tests/Feature/                   pengujian halaman dan autentikasi
 .github/workflows/pipeline.yml   pipeline build → test → staging → production
 deploy.sh                        skrip deploy ke server (7 langkah, set -e)
