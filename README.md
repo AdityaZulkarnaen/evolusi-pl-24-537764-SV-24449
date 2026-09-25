@@ -165,7 +165,8 @@ routes/api.php                   rute API berformat JSON
 config/cors.php                  alamat frontend yang boleh memanggil API
 frontend/                        aplikasi Vue 3 (lihat bagian Frontend Vue)
 tests/Feature/                   pengujian halaman dan autentikasi
-.github/workflows/pipeline.yml   pipeline build → test → staging → production
+.github/workflows/pipeline.yml   pipeline Laravel: build → test → staging → production
+.github/workflows/frontend.yml   pipeline Vue: lint → test → build → deploy
 deploy.sh                        skrip deploy ke server (7 langkah, set -e)
 ```
 
@@ -282,3 +283,20 @@ cache config/route/view → `queue:restart` → `artisan up`. Baris `set -e` mem
 berhenti di perintah pertama yang gagal, sehingga misalnya migrasi yang gagal tidak
 berlanjut ke `artisan up` dan membuka aplikasi dalam keadaan rusak. Selama belum ada
 server, job `production` hanya meng-`echo` langkah yang sama.
+
+### Pipeline frontend
+
+`.github/workflows/frontend.yml` berjalan berdampingan dengan pipeline Laravel. Semua
+perintahnya dijalankan di folder `frontend/`, dan keempat job dirangkai dengan `needs:`:
+
+| Job | Isi |
+| --- | --- |
+| `lint` | `npm ci` lalu `npm run lint` (ESLint) |
+| `test` | `npm ci` lalu `npm run test:unit -- --run` (Vitest, tanpa Laravel) |
+| `build` | `npm ci`, `npm run build` dengan `VITE_API_URL` dari variabel Actions, lalu mengunggah `dist/` sebagai artifact `frontend-dist` |
+| `deploy` | Mengunduh artifact `frontend-dist`, menampilkan isinya ke log, lalu simulasi unggah. Tidak menjalankan `npm run build` lagi |
+
+Setiap job memakai `actions/setup-node` dengan `cache: 'npm'`, jadi paket tidak diunduh
+ulang dari nol. Job `deploy` hanya berjalan pada push ke `main`
+(`if: github.event_name == 'push' && github.ref == 'refs/heads/main'`); Pull Request
+tetap menjalankan `lint`, `test`, dan `build`, tetapi `deploy` ditandai *skipped*.
