@@ -121,6 +121,27 @@ Browser hanya mengizinkan halaman dari alamat `FRONTEND_URL` (bawaan
 `http://localhost:5174`) memanggil API ini. Ubah nilainya di `.env` bila frontend
 berjalan di alamat lain.
 
+## Frontend Vue
+
+Folder `frontend/` berisi aplikasi Vue 3 terpisah (Vite + vue-router) yang membaca
+`GET /api/produk`. Halamannya ada dua: Beranda (`/`) dan Produk (`/produk`).
+
+```bash
+cd frontend
+cp .env.example .env      # isi VITE_API_URL, misalnya http://127.0.0.1:8000/api
+npm install
+npm run dev               # http://localhost:5174
+```
+
+Jalankan `php artisan serve` di folder induk bersamaan, supaya API bisa dipanggil.
+Port 5174 dipakai karena 5173 sudah menjadi milik Vite Laravel.
+
+| Perintah (di `frontend/`) | Kegunaan |
+| --- | --- |
+| `npm run dev` | Server pengembangan Vue |
+| `npm run lint` | Memeriksa kode dengan ESLint |
+| `npm run build` | Membangun hasil produksi ke `dist/` |
+
 ## Struktur berkas utama
 
 ```
@@ -141,6 +162,7 @@ resources/views/
 routes/web.php                   rute halaman web
 routes/api.php                   rute API berformat JSON
 config/cors.php                  alamat frontend yang boleh memanggil API
+frontend/                        aplikasi Vue 3 (lihat bagian Frontend Vue)
 tests/Feature/                   pengujian halaman dan autentikasi
 .github/workflows/pipeline.yml   pipeline build → test → staging → production
 deploy.sh                        skrip deploy ke server (7 langkah, set -e)
