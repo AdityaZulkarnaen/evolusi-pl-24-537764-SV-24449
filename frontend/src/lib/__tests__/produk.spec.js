@@ -3,7 +3,7 @@ import { formatRupiah, labelStok, ringkasProduk } from '../produk'
 
 describe('formatRupiah', () => {
   it('memberi pemisah ribuan dengan titik', () => {
-    expect(formatRupiah(1250000)).toBe('Rp1,250,000')
+    expect(formatRupiah(1250000)).toBe('Rp1.250.000')
     expect(formatRupiah(95000)).toBe('Rp95.000')
   })
 
