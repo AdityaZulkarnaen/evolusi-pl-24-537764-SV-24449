@@ -108,6 +108,41 @@ Buka http://127.0.0.1:8000.
 Aset hasil `npm run build` tidak ikut di-commit, jadi pengujian sengaja mematikan Vite
 lewat `withoutVite()` di `tests/TestCase.php`.
 
+## API
+
+`GET /api/produk` mengembalikan seluruh produk dalam bentuk JSON dan bisa diakses tanpa
+login:
+
+```json
+{"data":[{"id":1,"nama":"Kursi Kayu Ek","kategori":"Furnitur","harga":1250000,"stok":4}]}
+```
+
+Browser hanya mengizinkan halaman dari alamat `FRONTEND_URL` (bawaan
+`http://localhost:5174`) memanggil API ini. Ubah nilainya di `.env` bila frontend
+berjalan di alamat lain.
+
+## Frontend Vue
+
+Folder `frontend/` berisi aplikasi Vue 3 terpisah (Vite + vue-router) yang membaca
+`GET /api/produk`. Halamannya ada dua: Beranda (`/`) dan Produk (`/produk`).
+
+```bash
+cd frontend
+cp .env.example .env      # isi VITE_API_URL, misalnya http://127.0.0.1:8000/api
+npm install
+npm run dev               # http://localhost:5174
+```
+
+Jalankan `php artisan serve` di folder induk bersamaan, supaya API bisa dipanggil.
+Port 5174 dipakai karena 5173 sudah menjadi milik Vite Laravel.
+
+| Perintah (di `frontend/`) | Kegunaan |
+| --- | --- |
+| `npm run dev` | Server pengembangan Vue |
+| `npm run lint` | Memeriksa kode dengan ESLint |
+| `npm run test:unit` | Menjalankan unit test Vitest (tambahkan `-- --run` agar tidak terus memantau) |
+| `npm run build` | Membangun hasil produksi ke `dist/` |
+
 ## Struktur berkas utama
 
 ```
@@ -116,6 +151,8 @@ app/Http/Controllers/
     AkunController.php           halaman akun pengguna
     Auth/PendaftaranController.php
     Auth/SesiController.php      masuk dan keluar
+    ProdukController.php         CRUD produk (Blade)
+    Api/ProdukController.php     GET /api/produk untuk frontend Vue
 resources/views/
     layouts/app.blade.php        kerangka halaman
     partials/                    header dan footer
@@ -123,9 +160,13 @@ resources/views/
     beranda.blade.php
     akun.blade.php
     auth/                        halaman masuk dan daftar
-routes/web.php                   seluruh rute aplikasi
+routes/web.php                   rute halaman web
+routes/api.php                   rute API berformat JSON
+config/cors.php                  alamat frontend yang boleh memanggil API
+frontend/                        aplikasi Vue 3 (lihat bagian Frontend Vue)
 tests/Feature/                   pengujian halaman dan autentikasi
-.github/workflows/pipeline.yml   pipeline build → test → staging → production
+.github/workflows/pipeline.yml   pipeline Laravel: build → test → staging → production
+.github/workflows/frontend.yml   pipeline Vue: lint → test → build → deploy
 deploy.sh                        skrip deploy ke server (7 langkah, set -e)
 ```
 
@@ -242,3 +283,20 @@ cache config/route/view → `queue:restart` → `artisan up`. Baris `set -e` mem
 berhenti di perintah pertama yang gagal, sehingga misalnya migrasi yang gagal tidak
 berlanjut ke `artisan up` dan membuka aplikasi dalam keadaan rusak. Selama belum ada
 server, job `production` hanya meng-`echo` langkah yang sama.
+
+### Pipeline frontend
+
+`.github/workflows/frontend.yml` berjalan berdampingan dengan pipeline Laravel. Semua
+perintahnya dijalankan di folder `frontend/`, dan keempat job dirangkai dengan `needs:`:
+
+| Job | Isi |
+| --- | --- |
+| `lint` | `npm ci` lalu `npm run lint` (ESLint) |
+| `test` | `npm ci` lalu `npm run test:unit -- --run` (Vitest, tanpa Laravel) |
+| `build` | `npm ci`, `npm run build` dengan `VITE_API_URL` dari variabel Actions, lalu mengunggah `dist/` sebagai artifact `frontend-dist` |
+| `deploy` | Mengunduh artifact `frontend-dist`, menampilkan isinya ke log, lalu simulasi unggah. Tidak menjalankan `npm run build` lagi |
+
+Setiap job memakai `actions/setup-node` dengan `cache: 'npm'`, jadi paket tidak diunduh
+ulang dari nol. Job `deploy` hanya berjalan pada push ke `main`
+(`if: github.event_name == 'push' && github.ref == 'refs/heads/main'`); Pull Request
+tetap menjalankan `lint`, `test`, dan `build`, tetapi `deploy` ditandai *skipped*.

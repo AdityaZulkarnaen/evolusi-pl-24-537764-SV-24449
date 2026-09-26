@@ -1,0 +1,114 @@
+name: Frontend
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependensi
+        run: npm ci
+
+      - name: Periksa kode dengan ESLint
+        run: npm run lint
+
+  test:
+    name: Frontend Unit Test
+    needs: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependensi
+        run: npm ci
+
+      - name: Jalankan Vitest
+        run: npm run test:unit -- --run
+
+  build:
+    name: Frontend Build
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependensi
+        run: npm ci
+
+      - name: Build aplikasi Vue
+        run: npm run build
+        env:
+          # Diisi dari Settings → Secrets and variables → Actions → Variables.
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://127.0.0.1:8000/api' }}
+
+      - name: Unggah hasil build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  deploy:
+    name: Frontend Deploy
+    needs: build
+    # Hanya push ke main; branch lain dan Pull Request berhenti di build.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Tanpa checkout, folder frontend/ tidak ada di mesin ini.
+        working-directory: .
+
+    steps:
+      # Tidak ada checkout dan npm run build di sini: yang dideploy adalah
+      # hasil build yang sudah lolos lint dan test.
+      - name: Ambil hasil build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Tampilkan isi dist/
+        run: ls -laR dist
+
+      - name: Deploy (simulasi)
+        run: echo "Unggah isi dist/ ke hosting statis (simulasi)"
